@@ -38,6 +38,35 @@ inspection status.
 - Reconcile outputs before declaring the new system authoritative.
 - Do not infer Sage posting semantics without report validation.
 
+## Current Staging Support
+
+The PostgreSQL schema includes `core.migration_batches` and
+`core.migration_staging_records` for raw, repeatable imports. The script
+`tools/import-legacy-csv-staging.ps1` imports authorized CSV extracts into raw
+JSONB staging rows with source table name, source key, row number, and SHA-256
+hash.
+
+This staging layer intentionally does not transform or post accounting data.
+Transformation into `core.accounts`, journals, AP/AR, bank reconciliation, and
+other live tables must happen in later mapping jobs after accountant-reviewed
+field mapping and validation rules are defined.
+
+The first transform tool is `tools/transform-staged-accounts.ps1`. It maps staged
+`tAccount` rows into `core.accounts` only when an explicit JSON account-class
+mapping is supplied. Run it without `-Apply` for preview/validation, then with
+`-Apply` to upsert accounts and create `core.migration_source_refs`.
+
+The partner transform tool is `tools/transform-staged-partners.ps1`. It maps
+staged `tCustomr` or `tVendor` rows into `core.business_partners`, preserving
+legacy partner IDs and source references. Like the account transform, it previews
+by default and writes only when `-Apply` is supplied.
+
+The journal transform tool is `tools/transform-staged-journals.ps1`. It maps
+staged `tJourEnt` and `tJEntAct` rows into posted `core.journals` and
+`core.journal_lines`. It requires `-PositiveAmountSide` so signed legacy amounts
+are not interpreted implicitly. The chosen polarity must be validated against
+accepted Sage reports before any real migration run.
+
 ## Extraction Scope
 
 Extract these areas first:

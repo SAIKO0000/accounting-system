@@ -37,7 +37,7 @@ can replace the legacy Sage workflow for v1 core finance.
 ## AP Tests
 
 - Create a vendor.
-- Record a vendor bill and verify AP aging increases.
+- Record a vendor bill and verify the AP document and posted journal are created.
 - Record a vendor payment and verify open amount decreases.
 - Reject payment greater than open amount.
 - Confirm AP detail reconciles to GL control account.
@@ -45,7 +45,7 @@ can replace the legacy Sage workflow for v1 core finance.
 ## AR Tests
 
 - Create a customer.
-- Record a customer invoice and verify AR aging increases.
+- Record a customer invoice and verify the AR document and posted journal are created.
 - Record a customer receipt and verify open amount decreases.
 - Reject receipt greater than open amount.
 - Confirm AR detail reconciles to GL control account.
@@ -53,6 +53,7 @@ can replace the legacy Sage workflow for v1 core finance.
 ## Bank Reconciliation Tests
 
 - Create a bank account.
+- List bank reconciliation candidate lines for posted bank journal lines.
 - Match posted bank journal lines to statement lines.
 - Record bank reconciliation adjustment through controlled posting.
 - Close a reconciliation.
@@ -67,12 +68,19 @@ can replace the legacy Sage workflow for v1 core finance.
   balances.
 - Generate balance sheet and income statement for agreed periods.
 - Generate aged AP and aged AR.
+- Confirm aged AP and aged AR bucket current open documents correctly.
 - Export reports to Excel and PDF.
 - Confirm report parameters and run metadata are recorded.
 
 ## Migration Tests
 
 - Run the read-only Sage inspection script against an authorized company file.
+- Import authorized CSV extracts into raw migration staging.
+- Preview and apply staged chart-of-accounts transform with explicit account
+  class mapping.
+- Preview and apply staged customer/vendor transforms.
+- Preview and apply staged journal transform with explicit signed-amount
+  polarity.
 - Extract row counts for core tables and compare to migration staging counts.
 - Migrate chart of accounts and preserve legacy IDs.
 - Migrate journals and preserve legacy references.
@@ -90,7 +98,10 @@ can replace the legacy Sage workflow for v1 core finance.
   administer settings.
 - Confirm authentication success and failure events are logged.
 - Confirm authorization failures are logged.
+- Confirm unknown local development identities receive `401` and write an
+  `authorization_failure` audit event.
 - Confirm financial mutations create audit events.
+- Confirm report views and exports create audit events.
 - Confirm audit events cannot be modified through normal application paths.
 - Confirm exported files do not include secrets or masked sensitive fields.
 

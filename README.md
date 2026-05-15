@@ -21,6 +21,7 @@ monolith that replaces the core finance workflows first:
 ## Repository Contents
 
 - [Product Requirements Document](docs/prd.md)
+- [Project Memory And Progress Tracker](docs/project-memory.md)
 - [Legacy System Understanding](docs/legacy-system-understanding.md)
 - [Legacy Data Inventory](docs/legacy-data-inventory.md)
 - [Architecture Direction](docs/architecture-direction.md)
@@ -57,6 +58,87 @@ powershell -ExecutionPolicy Bypass -File .\tools\test-postgres-schema.ps1 -Passw
 
 The script drops and recreates only the `accounting_schema_test` database.
 
+Create a local development database for the API:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\setup-dev-database.ps1 -Password "<postgres-password>"
+```
+
+The script drops and recreates only the `accounting_dev` database.
+
+Import an authorized CSV extract into raw migration staging:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\import-legacy-csv-staging.ps1 `
+  -CsvPath ".\exports\tAccount.csv" `
+  -SourceName "authorized-sage-export" `
+  -SourceTable "tAccount" `
+  -SourceKeyColumn "lId" `
+  -Password "<postgres-password>"
+```
+
+This preserves raw rows as JSONB staging records; it does not post or transform
+accounting data into live tables.
+
+Preview and apply a staged chart-of-accounts transform:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\transform-staged-accounts.ps1 `
+  -MigrationBatchId 1 `
+  -CompanyId 1 `
+  -ClassMappingPath ".\config\account-class-map.json" `
+  -Password "<postgres-password>"
+
+powershell -ExecutionPolicy Bypass -File .\tools\transform-staged-accounts.ps1 `
+  -MigrationBatchId 1 `
+  -CompanyId 1 `
+  -ClassMappingPath ".\config\account-class-map.json" `
+  -Password "<postgres-password>" `
+  -Apply
+```
+
+The account-class mapping file is required so Sage class semantics are reviewed
+explicitly instead of guessed in code.
+
+Preview and apply staged customer/vendor transforms:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\transform-staged-partners.ps1 `
+  -MigrationBatchId 2 `
+  -CompanyId 1 `
+  -PartnerType customer `
+  -SourceTable "tCustomr" `
+  -Password "<postgres-password>"
+
+powershell -ExecutionPolicy Bypass -File .\tools\transform-staged-partners.ps1 `
+  -MigrationBatchId 3 `
+  -CompanyId 1 `
+  -PartnerType vendor `
+  -SourceTable "tVendor" `
+  -Password "<postgres-password>" `
+  -Apply
+```
+
+Preview and apply staged journal transforms:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\transform-staged-journals.ps1 `
+  -MigrationBatchId 4 `
+  -CompanyId 1 `
+  -PositiveAmountSide Debit `
+  -Password "<postgres-password>"
+
+powershell -ExecutionPolicy Bypass -File .\tools\transform-staged-journals.ps1 `
+  -MigrationBatchId 4 `
+  -CompanyId 1 `
+  -PositiveAmountSide Debit `
+  -Password "<postgres-password>" `
+  -Apply
+```
+
+`PositiveAmountSide` must be validated against accepted Sage reports before any
+real migration run.
+
 ## Build And Run
 
 Build the solution:
@@ -76,14 +158,37 @@ dotnet run --project .\tests\Accounting.Core.Tests\Accounting.Core.Tests.csproj
 Run the API locally:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\run-api-dev.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\run-api-dev.ps1 -PostgresPassword "<postgres-password>"
 ```
+
+Local development requests use `X-Accounting-User: api-dev` by default. This is
+a development identity bridge only; production authentication still needs OIDC.
 
 Useful API endpoints:
 
 - `GET /`
-- `GET /api/accounts`
+- `GET /api/companies/{companyId}/accounts`
+- `GET /api/companies/{companyId}/vendors`
+- `GET /api/companies/{companyId}/customers`
+- `GET /api/companies/{companyId}/bank-accounts`
+- `GET /api/companies/{companyId}/ap-documents`
+- `GET /api/companies/{companyId}/ar-documents`
+- `POST /api/ap-documents/bills`
+- `POST /api/ap-documents/{documentId}/payments`
+- `POST /api/ar-documents/invoices`
+- `POST /api/ar-documents/{documentId}/receipts`
+- `GET /api/companies/{companyId}/bank-reconciliations`
+- `GET /api/bank-reconciliations/{reconciliationId}`
+- `POST /api/bank-reconciliations`
+- `GET /api/companies/{companyId}/bank-accounts/{bankAccountId}/candidate-lines?throughDate=2026-05-31`
+- `POST /api/bank-reconciliations/{reconciliationId}/lines`
 - `POST /api/journals/validate`
 - `POST /api/journals/post`
 - `POST /api/journals/{id}/reverse`
-- `GET /api/journals`
+- `GET /api/journals/{id}`
+- `GET /api/companies/{companyId}/journals`
+- `GET /api/companies/{companyId}/reports/trial-balance?asOfDate=2026-05-15`
+- `GET /api/companies/{companyId}/reports/aged-payables?asOfDate=2026-07-20`
+- `GET /api/companies/{companyId}/reports/aged-receivables?asOfDate=2026-07-20`
+- `GET /api/companies/{companyId}/reports/general-ledger?fromDate=2026-05-01&toDate=2026-07-20`
+- `GET /api/companies/{companyId}/audit-events?limit=100`

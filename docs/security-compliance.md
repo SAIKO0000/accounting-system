@@ -21,6 +21,9 @@ Baseline references:
 - Session expiration and reauthentication must be enforced for sensitive
   actions.
 - Authentication successes and failures must be logged.
+- Current local development API uses `X-Accounting-User` with seeded database
+  users and roles. This is not production authentication and must be replaced by
+  OIDC/MFA before real deployment.
 
 ## Authorization
 

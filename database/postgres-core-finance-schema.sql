@@ -43,6 +43,7 @@ CREATE TYPE core.audit_event_type AS ENUM (
   'post',
   'reverse',
   'approve',
+  'view',
   'import',
   'export',
   'login',
@@ -300,6 +301,21 @@ CREATE TABLE core.migration_batches (
   CHECK (status IN ('running', 'completed', 'failed', 'void'))
 );
 
+CREATE TABLE core.migration_staging_records (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  migration_batch_id BIGINT NOT NULL REFERENCES core.migration_batches(id),
+  source_table TEXT NOT NULL,
+  source_key TEXT NOT NULL,
+  source_row_number INTEGER NOT NULL,
+  raw_hash TEXT NOT NULL,
+  raw_data JSONB NOT NULL,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (source_table <> ''),
+  CHECK (source_key <> ''),
+  CHECK (source_row_number > 0),
+  UNIQUE (migration_batch_id, source_table, source_key)
+);
+
 CREATE TABLE core.migration_source_refs (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   migration_batch_id BIGINT NOT NULL REFERENCES core.migration_batches(id),
@@ -333,6 +349,7 @@ CREATE INDEX idx_ap_documents_company_vendor ON core.ap_documents(company_id, ve
 CREATE INDEX idx_ar_documents_company_customer ON core.ar_documents(company_id, customer_id);
 CREATE INDEX idx_audit_events_company_time ON core.audit_events(company_id, event_timestamp);
 CREATE INDEX idx_audit_events_entity ON core.audit_events(entity_type, entity_id);
+CREATE INDEX idx_migration_staging_records_batch_table ON core.migration_staging_records(migration_batch_id, source_table);
 
 CREATE OR REPLACE FUNCTION core.assert_journal_can_post(target_journal_id BIGINT)
 RETURNS VOID

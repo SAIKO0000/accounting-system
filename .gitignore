@@ -1,7 +1,9 @@
 .dotnet/
 .templateengine/
+.nuget/
 bin/
 obj/
 *.user
 *.suo
 *.log
+*.lscache

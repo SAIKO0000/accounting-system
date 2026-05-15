@@ -6,8 +6,37 @@ WHERE table_schema = 'core'
   AND table_type = 'BASE TABLE';
 
 SELECT count(*) AS roles FROM core.roles;
+SELECT count(*) AS audit_event_types FROM pg_enum
+JOIN pg_type ON pg_type.oid = pg_enum.enumtypid
+JOIN pg_namespace ON pg_namespace.oid = pg_type.typnamespace
+WHERE pg_namespace.nspname = 'core'
+  AND pg_type.typname = 'audit_event_type';
+
 SELECT count(*) AS permissions FROM core.permissions;
 SELECT count(*) AS role_permissions FROM core.role_permissions;
+
+INSERT INTO core.migration_batches (source_name, source_path, notes)
+VALUES ('schema-validation', 'schema-validation.csv', 'validation batch')
+RETURNING id;
+
+INSERT INTO core.migration_staging_records (
+  migration_batch_id,
+  source_table,
+  source_key,
+  source_row_number,
+  raw_hash,
+  raw_data
+)
+VALUES (
+  1,
+  'tAccount',
+  '1',
+  1,
+  'schema-validation-hash',
+  '{"lId": 1, "sAcctId": "1000"}'::jsonb
+);
+
+SELECT count(*) AS migration_staging_records FROM core.migration_staging_records;
 
 INSERT INTO core.companies (name)
 VALUES ('Schema Test Company')

@@ -32,6 +32,13 @@ workbooks remain validation references during migration.
   - company
   - generated file ID where applicable
 
+Bank reconciliation summary:
+
+- Current implementation can list draft reconciliations and matched lines.
+- Close/finalization rules are pending because opening statement balance,
+  outstanding prior-period items, bank charges, and adjustment treatment need
+  accountant validation.
+
 ## Accounting Report Rules
 
 Trial balance:
@@ -61,6 +68,9 @@ Aged AP/AR:
 - Group by vendor/customer.
 - Show current and aging buckets.
 - Aging bucket defaults must be validated against legacy settings.
+- Current implementation reports current open documents by aging bucket. True
+  historical as-of aging requires settlement allocation history before it can be
+  validated against old month-end reports.
 
 ## Migration Reconciliation
 
